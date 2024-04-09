@@ -9,6 +9,19 @@ pipeline {
             }
             steps {
                 script {
+                    echo "Skipping tagging and release on master branch."
+                    return
+                }
+            }
+        }
+        
+        stage('Automated Release on Merged Branch') {
+            when {
+                // Trigger this stage only when not on the master branch
+                not { branch 'master' }
+            }
+            steps {
+                script {
                     // Determine the last branch merged into master
                     def mergedBranch = getLastMergedBranch()
                     if (mergedBranch == null) {
@@ -32,7 +45,7 @@ pipeline {
                     sh "echo $newVersion > version.txt"
                     sh "git add version.txt"
                     sh "git commit -m 'Update version number to $newVersion'"
-                    sh "git push origin master"
+                    sh "git push origin HEAD"
                     
                     // Generate structured release notes
                     def releaseNotes = generateReleaseNotes()
@@ -52,7 +65,7 @@ def determineVersionType(branchName) {
     } else if (branchName.startsWith("patch/") || branchName.startsWith("fix/")) {
         return "minor"
     } else {
-        echo "Warning: Unsupported branch name format: ${branchName}. Skipping tagging and release."
+        echo "Warning: Unsupported branch name format: ${branchName}."
         return null
     }
 }
@@ -97,9 +110,12 @@ def getLastMergedBranch() {
     def mergedBranchMessage = sh(script: "git log --merges --pretty=format:'%s' -n 1", returnStdout: true).trim()
     def branchNameMatch = mergedBranchMessage =~ /Merge pull request \d+ from \S+ into \S+/
     if (branchNameMatch) {
-        return branchNameMatch[0][1]
-    } else {
-        echo "Warning: Unable to determine merged branch name from commit message."
-        return null
+        def branchName = branchNameMatch[0][1]
+        if (!branchName.startsWith("pull")) {
+            return branchName
+        }
     }
+    echo "Warning: Unable to determine merged branch name from commit message. Falling back to branch name."
+    def branchNameOutput = sh(script: "git log --merges --pretty=format:'%s' -n 1 | cut -d' ' -f5", returnStdout: true).trim()
+    return branchNameOutput
 }
