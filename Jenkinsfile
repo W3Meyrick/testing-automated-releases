@@ -47,9 +47,9 @@ pipeline {
 }
 
 def determineVersionType(branchName) {
-    if (branchName.startsWith("github-organisation-name/feat/")) {
+    if (branchName.startsWith("feat/")) {
         return "major"
-    } else if (branchName.startsWith("github-organisation-name/patch/") || branchName.startsWith("github-organisation-name/fix/")) {
+    } else if (branchName.startsWith("patch/") || branchName.startsWith("fix/")) {
         return "minor"
     } else {
         echo "Warning: Unsupported branch name format: ${branchName}."
@@ -98,15 +98,14 @@ def getLastMergedBranch() {
     if (mergedBranchMessage.startsWith("Merge pull request")) {
         def parts = mergedBranchMessage.split(" ")
         if (parts.size() >= 7) {
-            return parts[6]
+            return parts[6].split('/')[1] // Extracting branch name dynamically
         }
     } else if (mergedBranchMessage.startsWith("Merge")) {
         def parts = mergedBranchMessage.split(" ")
         if (parts.size() >= 5) {
-            return parts[4]
+            return parts[4].split('/')[1] // Extracting branch name dynamically
         }
     }
-    echo "Warning: Unable to determine merged branch name from commit message. Falling back to branch name."
-    def branchNameOutput = sh(script: "git log --merges --pretty=format:'%s' -n 1 | grep -oE 'github-organisation-name/[a-zA-Z0-9_-]+' | head -1", returnStdout: true).trim()
-    return branchNameOutput
+    echo "Warning: Unable to determine merged branch name from commit message."
+    return null
 }
