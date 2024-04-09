@@ -6,7 +6,7 @@ pipeline {
             when {
                 // Execute this stage only when triggered by a pull request merge event
                 expression {
-                    return env.CHANGE_TARGET == 'master' && env.CHANGE_ID != null
+                    return currentBuild.rawBuild.getCause(hudson.model.Cause$UpstreamCause).upstreamBuild.getAction(org.jenkinsci.plugins.github_branch_source.PullRequestSCMHeadMergeAction)?.isMerged() == true
                 }
             }
             steps {
