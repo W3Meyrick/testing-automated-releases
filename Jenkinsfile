@@ -108,14 +108,17 @@ def generateReleaseNotes() {
 
 def getLastMergedBranch() {
     def mergedBranchMessage = sh(script: "git log --merges --pretty=format:'%s' -n 1", returnStdout: true).trim()
-    def branchNameMatch = mergedBranchMessage =~ /Merge pull request \d+ from \S+ into \S+/
-    if (branchNameMatch) {
-        def branchName = branchNameMatch[0][1]
-        if (!branchName.startsWith("pull")) {
-            return branchName
+    if (mergedBranchMessage.startsWith("Merge pull request")) {
+        def parts = mergedBranchMessage.split(" ")
+        if (parts.size() >= 7) {
+            return parts[6]
+        }
+    } else if (mergedBranchMessage.startsWith("Merge")) {
+        def parts = mergedBranchMessage.split(" ")
+        if (parts.size() >= 5) {
+            return parts[4]
         }
     }
-    echo "Warning: Unable to determine merged branch name from commit message. Falling back to branch name."
-    def branchNameOutput = sh(script: "git log --merges --pretty=format:'%s' -n 1 | cut -d' ' -f5", returnStdout: true).trim()
-    return branchNameOutput
+    echo "Warning: Unable to determine merged branch name from commit message."
+    return null
 }
