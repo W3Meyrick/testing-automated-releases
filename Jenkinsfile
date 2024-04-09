@@ -4,14 +4,19 @@ pipeline {
     stages {
         stage('Automated Release') {
             when {
-                // Execute this stage only when triggered by a pull request merge event
-                expression {
-                    return currentBuild.rawBuild.getCause(hudson.model.Cause$UpstreamCause).upstreamBuild.getAction(org.jenkinsci.plugins.github_branch_source.PullRequestSCMHeadMergeAction)?.isMerged() == true
-                }
+                // Trigger this stage only when on the master branch
+                branch 'master'
             }
             steps {
                 script {
-                    def versionType = determineVersionType(env.CHANGE_BRANCH)
+                    // Determine the last branch merged into master
+                    def mergedBranch = getLastMergedBranch()
+                    def versionType = determineVersionType(mergedBranch)
+                    
+                    if (versionType == null) {
+                        echo "Skipping tagging and release due to unsupported branch name format."
+                        return
+                    }
                     
                     // Generate tag
                     def tagName = generateTagName(versionType)
@@ -43,7 +48,8 @@ def determineVersionType(branchName) {
     } else if (branchName.startsWith("patch/") || branchName.startsWith("fix/")) {
         return "minor"
     } else {
-        error "Unsupported branch name format"
+        echo "Warning: Unsupported branch name format: ${branchName}. Skipping tagging and release."
+        return null
     }
 }
 
@@ -81,4 +87,9 @@ def generateReleaseNotes() {
     def commitLogs = sh(script: "git log --pretty=format:'%h - %s (%an)' origin/master..HEAD", returnStdout: true).trim()
     def releaseNotes = "## Changes since last release:\n\n${commitLogs}"
     return releaseNotes
+}
+
+def getLastMergedBranch() {
+    def mergedBranch = sh(script: "git log --merges --pretty=format:'%s' -n 1", returnStdout: true).trim()
+    return mergedBranch.tokenize(' ')[1].trim()
 }
