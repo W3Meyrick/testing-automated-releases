@@ -4,25 +4,12 @@ pipeline {
     stages {
         stage('Automated Release') {
             when {
-                // Trigger this stage only when on the master branch
-                branch 'master'
+                // Trigger this stage only when on the main branch
+                branch 'main'
             }
             steps {
                 script {
-                    echo "Skipping tagging and release on master branch."
-                    return
-                }
-            }
-        }
-        
-        stage('Automated Release on Merged Branch') {
-            when {
-                // Trigger this stage only when not on the master branch
-                not { branch 'master' }
-            }
-            steps {
-                script {
-                    // Determine the last branch merged into master
+                    // Determine the last branch merged into main
                     def mergedBranch = getLastMergedBranch()
                     if (mergedBranch == null) {
                         echo "Skipping tagging and release due to inability to determine merged branch."
@@ -101,7 +88,7 @@ def getVersionNumber() {
 }
 
 def generateReleaseNotes() {
-    def commitLogs = sh(script: "git log --pretty=format:'%h - %s (%an)' origin/master..HEAD", returnStdout: true).trim()
+    def commitLogs = sh(script: "git log --pretty=format:'%h - %s (%an)' origin/main..HEAD", returnStdout: true).trim()
     def releaseNotes = "## Changes since last release:\n\n${commitLogs}"
     return releaseNotes
 }
