@@ -11,8 +11,12 @@ pipeline {
                 script {
                     // Determine the last branch merged into master
                     def mergedBranch = getLastMergedBranch()
-                    def versionType = determineVersionType(mergedBranch)
+                    if (mergedBranch == null) {
+                        echo "Skipping tagging and release due to inability to determine merged branch."
+                        return
+                    }
                     
+                    def versionType = determineVersionType(mergedBranch)
                     if (versionType == null) {
                         echo "Skipping tagging and release due to unsupported branch name format."
                         return
@@ -90,6 +94,12 @@ def generateReleaseNotes() {
 }
 
 def getLastMergedBranch() {
-    def mergedBranch = sh(script: "git log --merges --pretty=format:'%s' -n 1", returnStdout: true).trim()
-    return mergedBranch.tokenize(' ')[1].trim()
+    def mergedBranchMessage = sh(script: "git log --merges --pretty=format:'%s' -n 1", returnStdout: true).trim()
+    def branchNameMatch = mergedBranchMessage =~ /Merge pull request \d+ from \S+ into \S+/
+    if (branchNameMatch) {
+        return branchNameMatch[0][1]
+    } else {
+        echo "Warning: Unable to determine merged branch name from commit message."
+        return null
+    }
 }
