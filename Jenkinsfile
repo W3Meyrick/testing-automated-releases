@@ -47,9 +47,9 @@ pipeline {
 }
 
 def determineVersionType(branchName) {
-    if (branchName.startsWith("feat/")) {
+    if (branchName.startsWith("github-organisation-name/feat/")) {
         return "major"
-    } else if (branchName.startsWith("patch/") || branchName.startsWith("fix/")) {
+    } else if (branchName.startsWith("github-organisation-name/patch/") || branchName.startsWith("github-organisation-name/fix/")) {
         return "minor"
     } else {
         echo "Warning: Unsupported branch name format: ${branchName}."
@@ -106,6 +106,7 @@ def getLastMergedBranch() {
             return parts[4]
         }
     }
-    echo "Warning: Unable to determine merged branch name from commit message."
-    return null
+    echo "Warning: Unable to determine merged branch name from commit message. Falling back to branch name."
+    def branchNameOutput = sh(script: "git log --merges --pretty=format:'%s' -n 1 | grep -oE 'github-organisation-name/[a-zA-Z0-9_-]+' | head -1", returnStdout: true).trim()
+    return branchNameOutput
 }
