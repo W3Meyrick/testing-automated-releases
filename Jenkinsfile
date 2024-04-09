@@ -69,24 +69,14 @@ pipeline {
                     
                     // Generate structured release notes
                     def commitLogs = sh(script: "git log --pretty=format:'%h - %s (%an)' origin/main..HEAD", returnStdout: true).trim()
-                    def releaseNotes = """## Changes since last release:
-
-${commitLogs}"""
+                    def releaseNotes = "## Changes since last release:\n\n${commitLogs}"
+                    
+                    // Save release notes to a file
+                    writeFile file: 'release_notes.md', text: releaseNotes
                     
                     // Generate release
                     def releaseName = "Release ${newVersion}"
-                    def curlCommand = """
-                        curl -X POST -H 'Authorization: token <your_github_token>' \\
-                        -d @- \\
-                        https://api.github.com/repos/<your_username>/<your_repo>/releases << EOF
-                        {
-                            "tag_name": "$tagName",
-                            "name": "$releaseName",
-                            "body": "$releaseNotes"
-                        }
-                        EOF
-                    """
-                    sh curlCommand.trim()
+                    sh "curl -X POST -H 'Authorization: token <your_github_token>' -F 'tag_name=$tagName' -F 'name=$releaseName' -F 'body=@release_notes.md' https://api.github.com/repos/<your_username>/<your_repo>/releases"
                 }
             }
         }
